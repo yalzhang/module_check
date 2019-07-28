@@ -11,13 +11,6 @@ import time
 # yum module info virt:rhel:80000xxxxxxxxxxxxxx | grep -A 200 Artifacts  | grep -Ev "^$|[#;]|Hint:"  > ./current.txt
 
 
-print("Notes: It is not recommended to compare modules in 2 different streams.")
-print("The argv should be in format 'virt:stream:version', like: virt:rhel:8000020190530233731, "
-      "argv[1] is the released one(older), and argv[2] is the current one(newer)")
-print("\nCompare 2 modules below:")
-print(sys.argv[1], sys.argv[2])
-
-
 def get_file(name, file_name):
     proc1 = subprocess.Popen(['yum', 'module', 'info', name], stdout=subprocess.PIPE)
     proc2 = subprocess.Popen('grep -A 200 Artifacts', stdin=proc1.stdout, stdout=subprocess.PIPE, shell=True)
@@ -45,11 +38,43 @@ def get_pkg_list(file_list):
     return package_num, content, package_name_list
 
 
-get_file(sys.argv[1], 'release.txt')
-get_file(sys.argv[2], 'current.txt')
 
-release_info = get_pkg_list("release.txt")
-current_info = get_pkg_list("current.txt")
+def check_profile(name):
+    proc1 = subprocess.Popen(['yum', 'module', 'info', name, '--profile'], stdout=subprocess.PIPE)
+    # Asume there is profile named "common"
+    f = open('/tmp/cur_profile_list.txt', 'w')
+    proc2 = subprocess.Popen('grep -A 20 common', stdin=proc1.stdout, stdout=f, shell=True)
+    proc1.stdout.close()
+    f.flush()
+    f.close()
+    while proc2.poll() is None:
+        time.sleep(1)
+    with open('/tmp/cur_profile_list.txt', 'r') as f:
+        content = f.readlines()
+    content = [x.strip('common :') for x in content]
+    print("profile pkg is %s" % content)
+    # compare with current profile content: libguestfs, libvirt-client, libvirt-daemon-config-network, libvirt-daemon-kvm
+    release_profile = ['libguestfs\n', 'libvirt-client\n', 'libvirt-daemon-config-network\n', 'libvirt-daemon-kvm\n']
+    retD = list(set(content).difference(set(release_profile)))
+    retE = list(set(release_profile).difference(set(content)))
+    if retD or retE:
+        print("Warning: There is changes in the profile pkg!")
+    else:
+        print("The profile pkg not change.")
+
+
+print("Notes: It is not recommended to compare modules in 2 different streams.")
+print("The argv should be in format 'virt:stream:version', like: virt:rhel:8000020190530233731, "
+      "argv[1] is the released one(older), and argv[2] is the current one(newer)")
+print("\nCompare 2 modules below:")
+print(sys.argv[1], sys.argv[2])
+
+
+get_file(sys.argv[1], '/tmp/release.txt')
+get_file(sys.argv[2], '/tmp/current.txt')
+
+release_info = get_pkg_list("/tmp/release.txt")
+current_info = get_pkg_list("/tmp/current.txt")
 
 # check the pkg number changes
 print("(1) PKG NUM CHECK:")
@@ -105,3 +130,7 @@ for x in pkg_name_cur:
             print("Warning: current pkg is not newer than released one:\n %s" % result)
         if stderr:
             print(stderr)
+            
+
+print("\n(4)CHECK CURRENT PROFILE:")
+check_profile(sys.argv[2])
