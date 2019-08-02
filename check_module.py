@@ -38,7 +38,6 @@ def get_pkg_list(file_list):
     return package_num, content, package_name_list
 
 
-
 def check_profile(name):
     proc1 = subprocess.Popen(['yum', 'module', 'info', name, '--profile'], stdout=subprocess.PIPE)
     # Asume there is profile named "common"
@@ -61,6 +60,22 @@ def check_profile(name):
         print("Warning: There is changes in the profile pkg!")
     else:
         print("The profile pkg not change.")
+
+
+def check_profile_name(name):
+    proc1 = subprocess.Popen(['yum', 'module', 'info', name], stdout=subprocess.PIPE)
+    proc2 = subprocess.Popen('grep -i profiles', stdin=proc1.stdout, stdout=subprocess.PIPE, shell=True)
+    profile_info = proc2.communicate()[0].decode("utf-8")
+    proc1.stdout.close()
+    while proc2.poll() is None:
+        time.sleep(1)
+    print("Profile info is %s" % profile_info)
+    profile_info1 = profile_info.replace(" ", "")
+    if "Profiles:common[d]" not in profile_info1:
+        print("Warning: No 'Profiles:common[d]' in the profile info!")
+    if 'Defaultprofiles:common' not in profile_info1:
+        print("Warning: No 'Defaultprofiles:common' in the profile info!")
+    print("Profile name check OK")
 
 
 print("Notes: It is not recommended to compare modules in 2 different streams.")
@@ -123,14 +138,17 @@ for x in pkg_name_cur:
     rel_ver = dict_rel.get(x)
     if rel_ver:
         Output = subprocess.Popen(['rpmdev-vercmp', cur_ver, rel_ver], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        stdout,stderr = Output.communicate()
+        stdout, stderr = Output.communicate()
         res = stdout.decode("utf-8")
         result = res.split("problems.\n\n")[1]
         if ">" not in result:
             print("Warning: current pkg is not newer than released one:\n %s" % result)
         if stderr:
             print(stderr)
-            
+
 
 print("\n(4)CHECK CURRENT PROFILE:")
 check_profile(sys.argv[2])
+
+print("\n(5)PROFILE NAME CHECK:")
+check_profile_name(sys.argv[2])
