@@ -3,6 +3,7 @@ import re
 import subprocess
 import sys
 import time
+import os
 
 # run below cmd to get the file_list first for the released and current module:
 # for released module:
@@ -77,7 +78,7 @@ def check_profile_name(name):
         print("Warning: No 'Defaultprofiles:common' in the profile info!")
     print("Profile name check OK")
 
-
+os.system('yum install -y rpmdevtools')
 print("Notes: It is not recommended to compare modules in 2 different streams.")
 print("The argv should be in format 'virt:stream:version', like: virt:rhel:8000020190530233731, "
       "argv[1] is the released one(older), and argv[2] is the current one(newer)")
