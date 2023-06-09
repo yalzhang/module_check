@@ -14,7 +14,7 @@ import os
 
 def get_file(name, file_name):
     proc1 = subprocess.Popen(['yum', 'module', 'info', name], stdout=subprocess.PIPE)
-    proc2 = subprocess.Popen('grep -A 200 Artifacts', stdin=proc1.stdout, stdout=subprocess.PIPE, shell=True)
+    proc2 = subprocess.Popen('grep -A 500 Artifacts', stdin=proc1.stdout, stdout=subprocess.PIPE, shell=True)
     proc1.stdout.close()
     f = open(file_name, 'w')
     proc3 = subprocess.Popen("grep -Ev '^$|[#;]|Hint:'", stdin=proc2.stdout, stdout=f, shell=True)
